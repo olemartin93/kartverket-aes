@@ -146,8 +146,18 @@ test.describe("Tsunami PWA", () => {
     await expect(page.locator("#placeName")).toHaveText("Geiranger · Tsunami");
     await expect(page).toHaveURL(/[?&]s=geiranger/);
     await expect(page.locator("#ampOut")).toHaveText("35 m");
-    // The fixture has no tide for Geiranger: the app must say so rather than invent one.
-    await expect(page.locator("#tide")).toHaveText("No tide forecast");
+    // The tide chip must be re-rendered for Geiranger. Where Kartverket has no
+    // prediction (as in the fixture), the app must say so rather than invent one.
+    const index = (await (await page.request.get("data/index.json")).json()) as { scenarios: { id: string; tide: boolean }[] };
+    const geirangerHasTide = index.scenarios.find((s) => s.id === "geiranger")?.tide === true;
+    const chip = page.locator('#tide[data-scenario="geiranger"]');
+    await expect(chip).toBeVisible();
+    if (geirangerHasTide) {
+      await expect(chip).toHaveText(/^Tide /);
+      await expect(chip).toHaveAttribute("title", /Geiranger/);
+    } else {
+      await expect(chip).toHaveText("No tide forecast");
+    }
     await page.waitForFunction(() => window.__aes?.state?.scenario === "geiranger" && window.__aes.state.time > 0.5);
 
     // The choice is remembered on the next visit.
