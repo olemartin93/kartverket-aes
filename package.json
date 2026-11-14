@@ -1,0 +1,50 @@
+{
+  "name": "kartverket-aes",
+  "version": "1.0.0",
+  "description": "Offline PWA: cinematic tsunami over Ålesund built on Kartverket data",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 4173 --strictPort",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:e2e": "playwright test --trace off",
+    "fetch-data": "tsx scripts/fetch-kartverket.ts",
+    "fixture": "tsx scripts/make-fixture.ts",
+    "check-data": "tsx scripts/check-data.ts",
+    "icons": "node scripts/make-icons.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/olemartin93/kartverket-aes.git"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/olemartin93/kartverket-aes/issues"
+  },
+  "homepage": "https://github.com/olemartin93/kartverket-aes#readme",
+  "dependencies": {
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@tailwindcss/vite": "^4.3.5",
+    "@types/node": "^26.6.6",
+    "@types/three": "^0.187.0",
+    "geotiff": "^3.0.5",
+    "jsdom": "^31.0.1",
+    "proj4": "^2.23.0",
+    "tailwindcss": "^4.3.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vite-plugin-pwa": "^2.0.0",
+    "vitest": "^5.1.0",
+    "workbox-window": "^7.4.1"
+  },
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  }
+}
