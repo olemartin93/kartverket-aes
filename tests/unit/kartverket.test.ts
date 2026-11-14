@@ -3,6 +3,7 @@ import { PLACES } from "../../src/data/places";
 import { localPlaces, project } from "../../scripts/geo";
 import {
   coverageUrl,
+  isSeaValue,
   isTiff,
   parseCoverageNames,
   parseTideResponse,
@@ -50,6 +51,16 @@ describe("WCS helpers", () => {
     expect(url.searchParams.get("request")).toBe("GetCoverage");
     expect(url.searchParams.get("bbox")).toBe("1,2,3,4");
     expect(url.searchParams.get("crs")).toBe("EPSG:25833");
+  });
+
+  it("classifies sea cells (0 m water surface or no-data) and keeps land", () => {
+    expect(isSeaValue(0, -32767)).toBe(true);
+    expect(isSeaValue(-0.4, null)).toBe(true);
+    expect(isSeaValue(-32767, -32767)).toBe(true);
+    expect(isSeaValue(Number.NaN, null)).toBe(true);
+    expect(isSeaValue(-3.4e38, null)).toBe(true);
+    expect(isSeaValue(0.3, -32767)).toBe(false);
+    expect(isSeaValue(189, null)).toBe(false);
   });
 
   it("recognises TIFF magic bytes and rejects XML errors", () => {

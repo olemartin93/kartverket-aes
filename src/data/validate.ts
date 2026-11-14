@@ -54,7 +54,7 @@ export function validateTerrain(meta: TerrainMeta, raw: Int16Array): string[] {
     if (!isTrustedSource(meta.source)) errors.push(`untrusted terrain source: ${meta.source.url}`);
     if (meta.source.license !== "CC BY 4.0") errors.push(`unexpected license ${meta.source.license}`);
     if (meta.stats.max < 300 || meta.stats.max > 2000) errors.push(`implausible max elevation ${meta.stats.max} m`);
-    if (meta.stats.min < -50) errors.push(`implausible min elevation ${meta.stats.min} m`);
+    if (meta.stats.min < 0) errors.push(`implausible min elevation ${meta.stats.min} m`);
     if (meta.stats.seaFraction < 0.1 || meta.stats.seaFraction > 0.9) {
       errors.push(`implausible sea fraction ${meta.stats.seaFraction}`);
     }

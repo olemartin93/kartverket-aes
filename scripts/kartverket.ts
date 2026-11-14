@@ -51,6 +51,14 @@ export function coverageUrl(
   return `${WCS_ENDPOINT}?${params.toString()}`;
 }
 
+/**
+ * Whether a DTM cell value represents sea rather than land. Kartverket's DTM
+ * sets water surfaces to 0 m (NN2000) and may also use a no-data value.
+ */
+export function isSeaValue(v: number, noData: number | null): boolean {
+  return !Number.isFinite(v) || v === noData || v <= 0 || v > 3000;
+}
+
 export function isTiff(buf: Uint8Array): boolean {
   if (buf.length < 4) return false;
   const le = buf[0] === 0x49 && buf[1] === 0x49 && (buf[2] === 42 || buf[2] === 43) && buf[3] === 0;

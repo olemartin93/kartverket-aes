@@ -14,6 +14,7 @@ import { localPlaces, project } from "./geo";
 import {
   WCS_ENDPOINT,
   coverageUrl,
+  isSeaValue,
   isTiff,
   parseCoverageNames,
   parseTideResponse,
@@ -102,9 +103,12 @@ async function fetchTerrain(): Promise<void> {
   let min = Infinity;
   let max = -Infinity;
   let sea = 0;
+  let exactZero = 0;
   for (let i = 0; i < raw.length; i++) {
     const v = Number(band[i]);
-    if (!Number.isFinite(v) || v === noData || v < -500 || v > 3000) {
+    if (v === 0) exactZero++;
+    // The DTM stores the sea surface as 0 m (or no-data); treat both as sea.
+    if (isSeaValue(v, noData)) {
       raw[i] = NODATA;
       sea++;
       continue;
@@ -114,6 +118,7 @@ async function fetchTerrain(): Promise<void> {
     max = Math.max(max, v);
   }
 
+  console.log(`No-data value: ${String(noData)}; cells exactly 0 m: ${exactZero}; sea cells: ${sea}/${raw.length}`);
   const meta: TerrainMeta = {
     version: 1,
     synthetic: false,
