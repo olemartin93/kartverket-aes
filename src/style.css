@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+@theme {
+  --color-night: #080b24;
+  --color-ember: #ff8a5c;
+  --color-lagoon: #2ec4c9;
+}
+
+@layer components {
+  .btn {
+    @apply grid size-11 shrink-0 place-items-center rounded-full bg-white/10 text-slate-100 ring-1 ring-white/15 transition hover:bg-white/20 active:scale-95 focus-visible:outline-2 focus-visible:outline-ember aria-pressed:bg-ember/30;
+  }
+  .btn svg {
+    @apply size-5;
+  }
+}
+
+html,
+body {
+  height: 100%;
+  overscroll-behavior: none;
+}

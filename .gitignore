@@ -1,0 +1,8 @@
+node_modules
+dist
+coverage
+test-results
+playwright-report
+# Generated at build time from Kartverket (see scripts/fetch-kartverket.ts)
+public/data/*
+!public/data/.gitkeep
