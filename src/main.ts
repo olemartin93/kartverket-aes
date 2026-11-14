@@ -85,8 +85,9 @@ function renderSources(meta: TerrainMeta, tide: TideData | undefined): void {
   );
 }
 
-function renderTide(tide: TideData | undefined): number {
+function renderTide(scenario: Scenario, tide: TideData | undefined): number {
   const chip = el("tide");
+  chip.dataset["scenario"] = scenario.id;
   if (tide === undefined) {
     chip.textContent = "No tide forecast";
     chip.title = "Kartverket has no tide prediction for this location; sea level 0 m (NN2000) is used.";
@@ -98,7 +99,8 @@ function renderTide(tide: TideData | undefined): number {
   const ext = nextExtremes(tide, now);
   const next = ext.high !== undefined ? ` · HW ${formatClock(ext.high)}` : "";
   chip.textContent = reading.inRange ? `Tide ${formatLevel(reading.metres)}${next}` : `Tide forecast expired · ${formatLevel(reading.metres)}`;
-  chip.title = `Kartverket prediction for ${tide.station.name}${tide.station.code ? ` (${tide.station.code})` : ""}, relative to NN2000`;
+  const station = `${tide.station.name}${tide.station.code ? `, ${tide.station.code}` : ""}`;
+  chip.title = `Kartverket prediction for ${scenario.city.name} (reference station ${station}), relative to NN2000`;
   chip.hidden = false;
   return reading.metres;
 }
@@ -241,7 +243,7 @@ async function boot(): Promise<void> {
     el("exagNote").textContent =
       scenario.exaggeration === 1 ? "Relief is shown at true scale." : `Relief is exaggerated ×${scenario.exaggeration}.`;
     renderSources(meta, tide);
-    const tideLevel = renderTide(tide);
+    const tideLevel = renderTide(scenario, tide);
 
     amp.value = String(scenario.wave.amplitude);
     ampOut.textContent = `${scenario.wave.amplitude} m`;
