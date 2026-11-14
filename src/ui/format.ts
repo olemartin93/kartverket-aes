@@ -15,9 +15,16 @@ export function formatClock(d: Date): string {
   return d.toLocaleTimeString("nb-NO", { hour: "2-digit", minute: "2-digit" });
 }
 
-export function statusText(toArrival: number, lit: number, total: number, time: number): string {
-  if (time < 6) return "Flying in along the fjord towards Ålesund";
-  if (toArrival > 0.2) return `Wave reaches Ålesund in ${toArrival.toFixed(1)} s`;
+export function statusText(city: string, toArrival: number, lit: number, total: number, time: number): string {
+  if (time < 6) return `Flying in towards ${city}`;
+  if (toArrival > 0.2) return `Wave reaches ${city} in ${toArrival.toFixed(1)} s`;
   const out = total === 0 ? 0 : Math.round((1 - lit / total) * 100);
-  return `Ålesund flooded · ${out}% of lights out`;
+  return `${city} flooded · ${out}% of lights out`;
+}
+
+/** Scenario id from `?s=`, falling back to a remembered choice, then the default. */
+export function pickScenarioId(search: string, remembered: string | null, available: readonly string[], fallback: string): string {
+  const fromUrl = new URLSearchParams(search).get("s");
+  for (const id of [fromUrl, remembered]) if (id !== null && available.includes(id)) return id;
+  return available.includes(fallback) ? fallback : (available[0] ?? fallback);
 }

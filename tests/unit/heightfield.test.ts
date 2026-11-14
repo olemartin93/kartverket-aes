@@ -4,7 +4,8 @@ import { decodeTerrain, distanceToLand, isLandAt, sampleHeight, seabedDepth } fr
 
 function meta(width: number, height: number, overrides: Partial<TerrainMeta> = {}): TerrainMeta {
   return {
-    version: 1,
+    version: 2,
+    scenario: "test",
     synthetic: true,
     source: { provider: "t", dataset: "t", url: "https://example.invalid", license: "n/a", attribution: "t", fetchedAt: "2026-01-01T00:00:00Z" },
     crs: "EPSG:25833",
@@ -14,7 +15,7 @@ function meta(width: number, height: number, overrides: Partial<TerrainMeta> = {
     scale: 0.1,
     nodata: -32768,
     verticalDatum: "NN2000",
-    places: { alesund: { lat: 0, lon: 0, x: 0, z: 0 } },
+    scene: { city: { x: 0, z: 0 }, waveOrigin: { x: -1, z: -1 }, camera: [], settlements: [], labels: [], checks: [] },
     stats: { min: 0, max: 0, seaFraction: 0 },
     ...overrides,
   };

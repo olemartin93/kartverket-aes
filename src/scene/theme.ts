@@ -23,9 +23,6 @@ export const THEME = {
   lightAlt: new Color("#fff1d6"),
 } as const;
 
-/** Vertical exaggeration so the (modest) Sunnmøre relief reads well on a phone. Applied to terrain and water alike. */
-export const EXAGGERATION = 1.5;
-
 export function terrainColor(h: number, out: Color): Color {
   const stops = THEME.terrain;
   const first = stops[0];

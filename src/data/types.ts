@@ -10,16 +10,29 @@ export interface Provenance {
   readonly fetchedAt: string;
 }
 
-export interface LocalPlace {
-  readonly lat: number;
-  readonly lon: number;
-  /** Local scene coordinates in metres (x = east, z = south). */
+/** Local scene coordinates in metres relative to the raster centre (x = east, z = south). */
+export interface XZ {
   readonly x: number;
   readonly z: number;
 }
 
+export interface XYZ extends XZ {
+  readonly y: number;
+}
+
+export interface SceneGeometry {
+  readonly city: XZ;
+  readonly waveOrigin: XZ;
+  readonly camera: ReadonlyArray<{ readonly t: number; readonly pos: XYZ; readonly target: XYZ }>;
+  readonly settlements: ReadonlyArray<XZ & { readonly radius: number; readonly count: number }>;
+  readonly labels: ReadonlyArray<XZ & { readonly text: string; readonly from: number; readonly to: number }>;
+  /** Ground-truth elevation checks (local coordinates). */
+  readonly checks: ReadonlyArray<XZ & { readonly name: string; readonly radius: number; readonly min: number; readonly max: number }>;
+}
+
 export interface TerrainMeta {
-  readonly version: 1;
+  readonly version: 2;
+  readonly scenario: string;
   /** True only for generated test fixtures. Never deployed. */
   readonly synthetic: boolean;
   readonly source: Provenance;
@@ -33,7 +46,7 @@ export interface TerrainMeta {
   /** Value marking cells without land elevation (sea). */
   readonly nodata: number;
   readonly verticalDatum: "NN2000";
-  readonly places: Readonly<Record<string, LocalPlace>>;
+  readonly scene: SceneGeometry;
   readonly stats: { readonly min: number; readonly max: number; readonly seaFraction: number };
 }
 
@@ -48,4 +61,12 @@ export interface TideData {
   readonly start: string;
   readonly intervalMinutes: number;
   readonly values: readonly number[];
+}
+
+/** public/data/index.json – which scenarios were built and whether tide data exists. */
+export interface DataIndex {
+  readonly version: 2;
+  readonly synthetic: boolean;
+  readonly builtAt: string;
+  readonly scenarios: ReadonlyArray<{ readonly id: string; readonly tide: boolean }>;
 }
