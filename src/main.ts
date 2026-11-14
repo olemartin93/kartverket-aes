@@ -4,7 +4,7 @@ import type { TerrainMeta, TideData } from "./data/types";
 import { decodeTerrain } from "./lib/heightfield";
 import { nextExtremes, tideAt } from "./lib/tide";
 import type { FrameState, World } from "./scene/world";
-import { formatClock, formatLevel, statusText } from "./ui/format";
+import { formatClock, formatLevel, parseStartTime, statusText } from "./ui/format";
 import { ICONS } from "./ui/icons";
 
 declare global {
@@ -174,6 +174,8 @@ async function start(): Promise<void> {
 
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const { createWorld } = await import("./scene/world");
+  const { DURATION } = await import("./lib/camera");
+  const initialTime = parseStartTime(window.location.search, DURATION);
   let onFrame: (s: FrameState) => void = () => undefined;
   const world = createWorld({
     canvas: el<HTMLCanvasElement>("scene"),
@@ -181,6 +183,7 @@ async function start(): Promise<void> {
     meta,
     tide: tideLevel,
     reducedMotion,
+    initialTime,
     onFrame: (s) => onFrame(s),
   });
   onFrame = setupUi(world, reducedMotion);

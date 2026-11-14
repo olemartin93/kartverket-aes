@@ -1,3 +1,11 @@
+/** Reads `?t=<seconds>` so a link can jump straight to a moment in the animation. */
+export function parseStartTime(search: string, duration: number): number {
+  const raw = new URLSearchParams(search).get("t");
+  if (raw === null || raw.trim() === "") return 0;
+  const t = Number(raw);
+  return Number.isFinite(t) ? Math.min(Math.max(t, 0), duration) : 0;
+}
+
 export function formatLevel(m: number): string {
   const sign = m > 0 ? "+" : m < 0 ? "−" : "±";
   return `${sign}${Math.abs(m).toFixed(2)} m`;

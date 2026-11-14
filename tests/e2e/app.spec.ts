@@ -50,14 +50,13 @@ test.describe("Ålesund tsunami PWA", () => {
   });
 
   test("wave reaches the city and floods lights", async ({ page }) => {
-    test.slow();
-    await page.goto("./");
+    // Jump to just after the crest reaches Ålesund (independent of frame rate).
+    await page.goto("./?t=24");
     await waitReady(page);
-    // Fast-forward is not exposed, so wait for the real animation to pass arrival.
     await page.waitForFunction(() => {
       const s = window.__aes?.state;
-      return s !== undefined && s.toArrival < -2;
-    }, null, { timeout: 60_000, polling: 250 });
+      return s !== undefined && s.toArrival < -2 && s.lit < s.totalLights;
+    }, null, { timeout: 30_000, polling: 250 });
     const s = await page.evaluate(() => window.__aes?.state);
     expect(s).toBeDefined();
     expect(s!.lit).toBeLessThan(s!.totalLights);

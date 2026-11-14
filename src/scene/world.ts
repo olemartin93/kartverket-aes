@@ -43,6 +43,8 @@ export interface WorldOptions {
   readonly tide: number;
   readonly onFrame: (s: FrameState) => void;
   readonly reducedMotion: boolean;
+  /** Animation time (s) to start from, e.g. from the `?t=` URL parameter. */
+  readonly initialTime?: number;
 }
 
 export interface World {
@@ -103,7 +105,7 @@ export function createWorld(opts: WorldOptions): World {
   controls.minDistance = 300;
   controls.maxDistance = 40_000;
 
-  let time = 0;
+  let time = opts.initialTime ?? 0;
   let playing = true;
   let freeCamera = false;
   let last = performance.now();
