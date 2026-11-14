@@ -1,49 +1,18 @@
 /**
- * Writes SYNTHETIC terrain/tide files to public/data for local development and
- * automated tests only. Files are flagged `synthetic: true`; the app shows a
- * banner and the deploy pipeline refuses to publish them.
+ * Writes SYNTHETIC terrain/tide files for every scenario to public/data for
+ * local development and automated tests only. Files are flagged
+ * `synthetic: true`; the app shows a banner and the deploy pipeline refuses
+ * to publish them.
  *
  *   npm run fixture
  */
 import { mkdir, writeFile } from "node:fs/promises";
-import { AREA } from "../src/data/places";
-import type { TerrainMeta, TideData } from "../src/data/types";
-import { localPlaces, project } from "./geo";
+import { SCENARIOS } from "../src/data/scenarios";
+import type { DataIndex, TerrainMeta, TideData } from "../src/data/types";
+import { sceneGeometry, scenarioBbox } from "./geo";
 
 const OUT = new URL("../public/data/", import.meta.url);
-const W = 240;
-const H = 200;
 const NODATA = -32768;
-
-const sw = project({ lat: AREA.south, lon: AREA.west });
-const ne = project({ lat: AREA.north, lon: AREA.east });
-const bbox: [number, number, number, number] = [sw[0], sw[1], ne[0], ne[1]];
-const places = localPlaces(bbox);
-const sizeX = bbox[2] - bbox[0];
-const sizeZ = bbox[3] - bbox[1];
-
-const raw = new Int16Array(W * H);
-let sea = 0;
-let min = Infinity;
-let max = -Infinity;
-for (let j = 0; j < H; j++) {
-  for (let i = 0; i < W; i++) {
-    const x = ((i + 0.5) / W - 0.5) * sizeX;
-    const z = ((j + 0.5) / H - 0.5) * sizeZ;
-    // Land rises towards the south-east; open sea to the north-west.
-    const coast = (x / sizeX) * 1.2 - (z / sizeZ) * 1.0 + 0.15 + 0.08 * Math.sin(x / 1500) * Math.cos(z / 1700);
-    if (coast < 0) {
-      raw[j * W + i] = NODATA;
-      sea++;
-      continue;
-    }
-    const ridges = Math.abs(Math.sin(x / 2600 + Math.cos(z / 3100))) * Math.abs(Math.cos(z / 2300));
-    const h = Math.max(0.5, coast * 900 * ridges + coast * 120);
-    raw[j * W + i] = Math.round(h * 10);
-    min = Math.min(min, h);
-    max = Math.max(max, h);
-  }
-}
 
 const provenance = {
   provider: "Synthetic test fixture",
@@ -54,37 +23,76 @@ const provenance = {
   fetchedAt: new Date().toISOString(),
 };
 
-const meta: TerrainMeta = {
-  version: 1,
-  synthetic: true,
-  source: provenance,
-  crs: "EPSG:25833",
-  bbox,
-  width: W,
-  height: H,
-  scale: 0.1,
-  nodata: NODATA,
-  verticalDatum: "NN2000",
-  places,
-  stats: { min, max, seaFraction: sea / raw.length },
-};
-
-const start = new Date(Math.floor(Date.now() / 86_400_000) * 86_400_000 - 2 * 86_400_000);
-const values = Array.from({ length: 24 * 30 }, (_, k) => Math.round(80 * Math.sin((2 * Math.PI * k) / 12.42) * 10) / 10);
-const tide: TideData = {
-  version: 1,
-  synthetic: true,
-  source: provenance,
-  station: { name: "Synthetic", code: "TEST", lat: 62.47, lon: 6.15 },
-  reference: "NN2000",
-  unit: "cm",
-  start: start.toISOString(),
-  intervalMinutes: 60,
-  values,
-};
-
-await mkdir(OUT, { recursive: true });
-await writeFile(new URL("terrain.bin", OUT), new Uint8Array(raw.buffer));
-await writeFile(new URL("terrain.json", OUT), JSON.stringify(meta, null, 2));
-await writeFile(new URL("tide.json", OUT), JSON.stringify(tide));
-console.log(`Synthetic fixture written (${W}x${H}).`);
+const index: DataIndex["scenarios"][number][] = [];
+for (const s of SCENARIOS) {
+  const bbox = scenarioBbox(s);
+  const scene = sceneGeometry(s, bbox);
+  const W = 200;
+  const H = Math.max(16, Math.round((W * (bbox[3] - bbox[1])) / (bbox[2] - bbox[0])));
+  const sizeX = bbox[2] - bbox[0];
+  const sizeZ = bbox[3] - bbox[1];
+  // Coast runs perpendicular to the wave direction, through the city.
+  const dx = scene.city.x - scene.waveOrigin.x;
+  const dz = scene.city.z - scene.waveOrigin.z;
+  const len = Math.hypot(dx, dz) || 1;
+  const raw = new Int16Array(W * H);
+  let sea = 0;
+  let min = Infinity;
+  let max = -Infinity;
+  for (let j = 0; j < H; j++) {
+    for (let i = 0; i < W; i++) {
+      const x = ((i + 0.5) / W - 0.5) * sizeX;
+      const z = ((j + 0.5) / H - 0.5) * sizeZ;
+      const along = ((x - scene.city.x) * dx + (z - scene.city.z) * dz) / len;
+      const coast = along + 300 + 400 * Math.sin(x / 1500) * Math.cos(z / 1700);
+      if (coast < 0) {
+        raw[j * W + i] = NODATA;
+        sea++;
+        continue;
+      }
+      const ridges = Math.abs(Math.sin(x / 2600 + Math.cos(z / 3100))) * Math.abs(Math.cos(z / 2300));
+      const h = Math.max(0.5, Math.min(coast * 0.08, 1200) * ridges + coast * 0.01);
+      raw[j * W + i] = Math.round(h * 10);
+      min = Math.min(min, h);
+      max = Math.max(max, h);
+    }
+  }
+  const meta: TerrainMeta = {
+    version: 2,
+    scenario: s.id,
+    synthetic: true,
+    source: provenance,
+    crs: "EPSG:25833",
+    bbox,
+    width: W,
+    height: H,
+    scale: 0.1,
+    nodata: NODATA,
+    verticalDatum: "NN2000",
+    scene,
+    stats: { min, max, seaFraction: sea / raw.length },
+  };
+  const start = new Date(Math.floor(Date.now() / 86_400_000) * 86_400_000 - 2 * 86_400_000);
+  const tide: TideData = {
+    version: 1,
+    synthetic: true,
+    source: provenance,
+    station: { name: "Synthetic", code: "TEST", lat: s.city.lat, lon: s.city.lon },
+    reference: "NN2000",
+    unit: "cm",
+    start: start.toISOString(),
+    intervalMinutes: 60,
+    values: Array.from({ length: 24 * 30 }, (_, k) => Math.round(80 * Math.sin((2 * Math.PI * k) / 12.42) * 10) / 10),
+  };
+  const dir = new URL(`${s.id}/`, OUT);
+  await mkdir(dir, { recursive: true });
+  await writeFile(new URL("terrain.bin", dir), new Uint8Array(raw.buffer));
+  await writeFile(new URL("terrain.json", dir), JSON.stringify(meta));
+  // Exercise the "no tide data" path for one scenario.
+  const withTide = s.id !== "geiranger";
+  if (withTide) await writeFile(new URL("tide.json", dir), JSON.stringify(tide));
+  index.push({ id: s.id, tide: withTide });
+}
+const out: DataIndex = { version: 2, synthetic: true, builtAt: new Date().toISOString(), scenarios: index };
+await writeFile(new URL("index.json", OUT), JSON.stringify(out, null, 2));
+console.log(`Synthetic fixtures written for ${index.length} scenarios.`);

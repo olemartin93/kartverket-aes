@@ -12,11 +12,11 @@ import {
   Vector3,
 } from "three";
 import type { Heightfield } from "../lib/heightfield";
-import type { WaveParams } from "../lib/wave";
-import { EXAGGERATION, THEME } from "./theme";
+import { RADIAL_R0, type WaveParams } from "../lib/wave";
+import { THEME } from "./theme";
 
 const vertexShader = /* glsl */ `
-uniform float uTime, uTide, uAmp, uWidth, uSpeed, uStart, uInund, uRecStart, uRecDur, uExag;
+uniform float uTime, uTide, uAmp, uWidth, uSpeed, uStart, uInund, uRecStart, uRecDur, uExag, uRadial, uR0;
 uniform vec2 uOrigin, uDir, uSize;
 uniform sampler2D uHeight;
 varying vec3 vWorld;
@@ -26,14 +26,15 @@ varying float vCrest;
 // Mirror of waveEta() in src/lib/wave.ts
 float waveEta(vec2 p, float t) {
   if (t < uStart) return 0.0;
-  float s = dot(p - uOrigin, uDir);
+  float s = uRadial > 0.5 ? length(p - uOrigin) : dot(p - uOrigin, uDir);
   float d = s - (t - uStart) * uSpeed;
   float crest = exp(-pow(d / uWidth, 2.0));
   float behind = 1.0 / (1.0 + exp(clamp(d / (uWidth * 0.6), -40.0, 40.0)));
   float drawdown = -0.2 * exp(-pow((d - 2.2 * uWidth) / uWidth, 2.0));
   float recede = 1.0 - smoothstep(uRecStart, uRecStart + uRecDur, t);
   float ramp = smoothstep(uStart, uStart + 2.0, t);
-  return uAmp * (max(crest, uInund * behind) + drawdown) * recede * ramp;
+  float decay = uRadial > 0.5 ? sqrt(uR0 / max(s, uR0)) : 1.0;
+  return uAmp * decay * (max(crest, uInund * behind) + drawdown) * recede * ramp;
 }
 
 void main() {
@@ -95,7 +96,7 @@ export interface Water {
   update(time: number, tide: number): void;
 }
 
-export function createWater(hf: Heightfield, fogDensity: number): Water {
+export function createWater(hf: Heightfield, fogDensity: number, exaggeration: number): Water {
   const half = new Uint16Array(hf.heights.length);
   for (let i = 0; i < half.length; i++) half[i] = DataUtils.toHalfFloat(hf.heights[i] ?? 0);
   const tex = new DataTexture(half, hf.width, hf.height, RedFormat, HalfFloatType);
@@ -121,7 +122,9 @@ export function createWater(hf: Heightfield, fogDensity: number): Water {
       uInund: { value: 0.5 },
       uRecStart: { value: 0 },
       uRecDur: { value: 1 },
-      uExag: { value: EXAGGERATION },
+      uExag: { value: exaggeration },
+      uRadial: { value: 0 },
+      uR0: { value: RADIAL_R0 },
       uOrigin: { value: new Vector2() },
       uDir: { value: new Vector2(1, 0) },
       uSize: { value: new Vector2(hf.sizeX, hf.sizeZ) },
@@ -147,6 +150,7 @@ export function createWater(hf: Heightfield, fogDensity: number): Water {
     material,
     setWave(p) {
       set("uAmp", p.amplitude);
+      set("uRadial", p.kind === "radial" ? 1 : 0);
       set("uWidth", p.width);
       set("uSpeed", p.speed);
       set("uStart", p.startTime);

@@ -1,8 +1,20 @@
-# Ålesund Tsunami 🌊
+# Tsunami 🌊 – Norwegian fjords & coast
 
-An offline-capable Progressive Web App that flies you along the fjord towards
-Ålesund at dusk and then lets a (fictional) tsunami roll in from the open sea
-and wash over the city. Built on open data from **Kartverket**.
+An offline-capable Progressive Web App that flies you over Norwegian fjords and
+coastline at dusk and then lets a tsunami wash over the town. Built on open
+data from **Kartverket**.
+
+| Place | Scenario |
+| --- | --- |
+| Ålesund | Fictional wave from the open sea (nod to the prehistoric Storegga tsunami) |
+| Geiranger | **Åkneset** rock slide into Sunnylvsfjorden – a real, monitored hazard (stylised) |
+| Oslo | Fictional wave up the inner Oslofjord |
+| Trondheim | Fictional wave past Munkholmen |
+| Bergen | Fictional wave down Byfjorden into Vågen |
+| Lofoten (Reine) | Fictional wave from Vestfjorden |
+
+Tap the place name in the top-left corner to switch. Links can choose a place
+and a moment: `?s=geiranger&t=14`.
 
 **Live:** https://olemartin93.github.io/kartverket-aes/
 
@@ -13,23 +25,26 @@ Home Screen, Chrome: ⋮ → Install app). After the first visit it works offlin
 
 | Data | Source | Licence |
 | --- | --- | --- |
-| Terrain (DTM, NN2000, ~60 m grid) | Kartverket *Nasjonal høydemodell* via Geonorge WCS `wcs.geonorge.no/skwms1/wcs.hoyde-dtm-nhm-25833` | CC BY 4.0 |
-| Tide prediction for Ålesund (NN2000) | Kartverket *Se havnivå* API `vannstand.kartverket.no/tideapi.php` | CC BY 4.0 |
+| Terrain per place (DTM, NN2000, 40–60 m grid) | Kartverket *Nasjonal høydemodell* via Geonorge WCS `wcs.geonorge.no/skwms1/wcs.hoyde-dtm-nhm-25833` | CC BY 4.0 |
+| Tide prediction per place (NN2000), where available | Kartverket *Se havnivå* API `vannstand.kartverket.no/tideapi.php` | CC BY 4.0 |
 
 * Data is downloaded **at build time in CI** (`npm run fetch-data`) straight
   from Kartverket over HTTPS, then bundled and precached so the app needs no
   network at runtime.
 * `npm run check-data -- --real` refuses to deploy unless the data passes
-  validation: trusted host + provider, licence, plausible relief and a
-  ground-truth check that **Aksla** rises to ≈189 m.
+  validation: trusted host + provider, licence, plausible relief, ground-truth
+  peak heights (Aksla ≈189 m, Dalsnibba ≈1476 m, Tryvannshøgda ≈529 m,
+  Gråkallen ≈552 m, Ulriken ≈643 m, Moskenesøya ≈1000 m) and the town centre
+  lying at sea level – which also catches wrong coordinates.
 * Each file records its exact source URL and download time. Both are shown in
   the app's *About* sheet.
 * The site rebuilds weekly so the tide forecast stays current.
 
 The wave itself is **illustrative, not a hazard model**: shape, height and
 speed are stylised and time-lapsed, the sea floor is synthetic (the DTM has no
-bathymetry), the relief is exaggerated ×1.5 and the city lights are placed
-randomly on low-lying land.
+bathymetry), relief is exaggerated up to ×2 in flat places and the city lights
+are placed randomly on low-lying land. Where Kartverket has no tide prediction,
+the app says so and uses 0 m (NN2000).
 
 ## Development
 

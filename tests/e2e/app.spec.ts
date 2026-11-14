@@ -10,13 +10,27 @@ async function animTime(page: Page): Promise<number> {
   return page.evaluate(() => window.__aes?.state?.time ?? -1);
 }
 
-test.describe("Ålesund tsunami PWA", () => {
+test.beforeEach(async ({ page }) => {
+  // Start every test from a clean slate (no remembered place).
+  await page.addInitScript(() => {
+    try {
+      if (!sessionStorage.getItem("__cleared")) {
+        localStorage.clear();
+        sessionStorage.setItem("__cleared", "1");
+      }
+    } catch {
+      /* ignore */
+    }
+  });
+});
+
+test.describe("Tsunami PWA", () => {
   test("loads Kartverket-backed scene and renders WebGL", async ({ page }) => {
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(e.message));
     await page.goto("./");
-    await expect(page).toHaveTitle("Ålesund Tsunami");
     await waitReady(page);
+    await expect(page).toHaveTitle("Ålesund · Tsunami");
     await expect(page.locator("#loading")).toBeHidden();
     await page.waitForFunction(() => (window.__aes?.state?.time ?? 0) > 1);
 
@@ -70,6 +84,7 @@ test.describe("Ålesund tsunami PWA", () => {
     const dialog = page.locator("#about");
     await expect(dialog).toBeVisible();
     await expect(dialog).toContainText("not a hazard or risk model");
+    await expect(dialog.locator("#scenarioNote")).toContainText("Storegga");
     await expect(dialog.locator("#sources li")).toHaveCount(2);
     await page.getByRole("button", { name: "Close" }).click();
     await expect(dialog).toBeHidden();
@@ -107,7 +122,56 @@ test.describe("Ålesund tsunami PWA", () => {
     await waitReady(page);
     await expect(page.locator("#offline")).toBeVisible();
     await page.waitForFunction(() => (window.__aes?.state?.time ?? 0) > 0.5);
+
+    // Every place is precached, so switching works without a network too.
+    await page.getByRole("button", { name: "Choose place" }).click();
+    await page.locator('#placeList [data-scenario="lofoten"]').click();
+    await waitReady(page);
+    expect(await page.evaluate(() => window.__aes?.scenario)).toBe("lofoten");
     await context.setOffline(false);
+  });
+
+  test("place picker lists all places and switches scenario", async ({ page }) => {
+    await page.goto("./");
+    await waitReady(page);
+    await page.getByRole("button", { name: "Choose place" }).click();
+    const list = page.locator("#placeList button");
+    await expect(list).toHaveCount(6);
+    await expect(page.locator('#placeList [data-scenario="alesund"]')).toHaveAttribute("aria-current", "true");
+    await expect(page.locator('#placeList [data-scenario="geiranger"]')).toContainText("real, monitored hazard");
+
+    await page.locator('#placeList [data-scenario="geiranger"]').click();
+    await waitReady(page);
+    expect(await page.evaluate(() => window.__aes?.scenario)).toBe("geiranger");
+    await expect(page.locator("#placeName")).toHaveText("Geiranger · Tsunami");
+    await expect(page).toHaveURL(/[?&]s=geiranger/);
+    await expect(page.locator("#ampOut")).toHaveText("35 m");
+    // The fixture has no tide for Geiranger: the app must say so rather than invent one.
+    await expect(page.locator("#tide")).toHaveText("No tide forecast");
+    await page.waitForFunction(() => window.__aes?.state?.scenario === "geiranger" && window.__aes.state.time > 0.5);
+
+    // The choice is remembered on the next visit.
+    await page.goto("./");
+    await waitReady(page);
+    expect(await page.evaluate(() => window.__aes?.scenario)).toBe("geiranger");
+  });
+
+  for (const id of ["oslo", "trondheim", "bergen", "lofoten"]) {
+    test(`opens ${id} directly from a link`, async ({ page }) => {
+      const errors: string[] = [];
+      page.on("pageerror", (e) => errors.push(e.message));
+      await page.goto(`./?s=${id}&t=24`);
+      await waitReady(page);
+      expect(await page.evaluate(() => window.__aes?.scenario)).toBe(id);
+      await page.waitForFunction((sid) => window.__aes?.state?.scenario === sid && window.__aes.state.toArrival < 0, id);
+      expect(errors).toEqual([]);
+    });
+  }
+
+  test("falls back to Ålesund for an unknown place", async ({ page }) => {
+    await page.goto("./?s=atlantis");
+    await waitReady(page);
+    expect(await page.evaluate(() => window.__aes?.scenario)).toBe("alesund");
   });
 
   test("fits a phone screen without horizontal scrolling", async ({ page }) => {
@@ -115,7 +179,7 @@ test.describe("Ålesund tsunami PWA", () => {
     await waitReady(page);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(0);
-    for (const name of ["Pause", "Restart", "Free camera", "About and data sources"]) {
+    for (const name of ["Choose place", "Pause", "Restart", "Free camera", "About and data sources"]) {
       await expect(page.getByRole("button", { name })).toBeInViewport();
     }
   });

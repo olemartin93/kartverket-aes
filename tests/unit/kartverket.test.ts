@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { PLACES } from "../../src/data/places";
-import { localPlaces, project } from "../../scripts/geo";
+import { findScenario } from "../../src/data/scenarios";
+import { project, sceneGeometry, scenarioBbox } from "../../scripts/geo";
 import {
   coverageUrl,
   isSeaValue,
@@ -100,16 +100,27 @@ describe("tide API helpers", () => {
 
 describe("projection", () => {
   it("projects Ålesund into EPSG:25833 (UTM 33N)", () => {
-    const [e, n] = project(PLACES.alesund);
+    const [e, n] = project(findScenario("alesund").city);
     expect(e).toBeGreaterThan(40_000);
     expect(e).toBeLessThan(50_000);
     expect(n).toBeGreaterThan(6_955_000);
     expect(n).toBeLessThan(6_961_000);
   });
 
-  it("puts Aksla east of the city centre and north is negative z", () => {
-    const places = localPlaces([30_000, 6_940_000, 60_000, 6_970_000]);
-    expect(places["aksla"]!.x).toBeGreaterThan(places["alesund"]!.x);
-    expect(places["vigra"]!.z).toBeLessThan(places["alesund"]!.z);
+  it("puts Aksla east of the city centre and the wave origin to the north-west (negative z)", () => {
+    const s = findScenario("alesund");
+    const g = sceneGeometry(s, scenarioBbox(s));
+    expect(g.checks[0]!.x).toBeGreaterThan(g.city.x);
+    expect(g.waveOrigin.z).toBeLessThan(g.city.z);
+    expect(g.waveOrigin.x).toBeLessThan(g.city.x);
+  });
+
+  it("snaps scenario bboxes to the cell size", () => {
+    for (const id of ["alesund", "geiranger", "lofoten"]) {
+      const s = findScenario(id);
+      const b = scenarioBbox(s);
+      for (const v of b) expect(v % s.cellSize).toBe(0);
+      expect(b[2]).toBeGreaterThan(b[0]);
+    }
   });
 });

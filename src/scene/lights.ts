@@ -1,7 +1,7 @@
 import { AdditiveBlending, BufferAttribute, BufferGeometry, Points, ShaderMaterial } from "three";
 import type { CityLight } from "../lib/lights";
 import { waveEta, type WaveParams } from "../lib/wave";
-import { EXAGGERATION, THEME } from "./theme";
+import { THEME } from "./theme";
 
 export interface LightField {
   readonly points: Points;
@@ -11,7 +11,7 @@ export interface LightField {
   reset(): void;
 }
 
-export function createLights(lights: readonly CityLight[]): LightField {
+export function createLights(lights: readonly CityLight[], exaggeration: number): LightField {
   const n = lights.length;
   const pos = new Float32Array(n * 3);
   const tint = new Float32Array(n);
@@ -19,7 +19,7 @@ export function createLights(lights: readonly CityLight[]): LightField {
   const dead = new Uint8Array(n);
   lights.forEach((l, i) => {
     pos[i * 3] = l.x;
-    pos[i * 3 + 1] = l.ground * EXAGGERATION + 6;
+    pos[i * 3 + 1] = l.ground * exaggeration + 6;
     pos[i * 3 + 2] = l.z;
     tint[i] = l.tint;
   });
@@ -47,7 +47,7 @@ export function createLights(lights: readonly CityLight[]): LightField {
         vTint = aTint;
         vOn = aOn;
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
-        gl_PointSize = clamp((2.0 + aTint * 2.5) * uPixelRatio * (2500.0 / -mv.z), 1.0, 18.0);
+        gl_PointSize = clamp((2.0 + aTint * 2.5) * uPixelRatio * (2500.0 / -mv.z), 1.5, 18.0);
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: /* glsl */ `
