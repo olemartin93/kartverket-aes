@@ -167,7 +167,7 @@ const geiranger: Scenario = {
     { at: ll(62.0846, 6.8717), text: "HELLESYLT", from: 10, to: 18 },
     { at: ll(62.1008, 7.2059), text: "GEIRANGER", from: 15, to: 26 },
   ],
-  groundTruth: [{ name: "Dalsnibba (≈1476 m)", at: ll(62.045, 7.273), radius: 2500, min: 1250, max: 1600 }],
+  groundTruth: [{ name: "Dalsnibba (≈1476 m)", at: ll(62.045, 7.273), radius: 1000, min: 1300, max: 1560 }],
 };
 
 const oslo: Scenario = {
